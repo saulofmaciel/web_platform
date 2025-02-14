@@ -1,0 +1,44 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} Issuers  {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>My customers</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'customer-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Parent</th>
+      <th>E-mail</th>
+      <th>Active</th>
+      <th>Creation</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in customer %}
+    <tr>
+      <td>{{ c.description }}</td>
+      <td>{{ c.parent }}</td>
+      <td>{{ c.email }}</td>
+      <td>{{ c.active }}</td>
+      <td>{{ c.creation }}</td>
+      <td>
+        <a href="{% url 'customer-detail' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
+        {% if user|user_has_role:"site_admin" %}
+        <a href="{% url 'customer-update' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

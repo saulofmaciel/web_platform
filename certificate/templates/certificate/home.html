@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %} Home  {% endblock title %}
+{% block content %}
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Issuer</th>
+      <th>Customer</th>
+      <th>Creation</th>
+      <th>Due Date</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in certificate %}
+    <tr>
+      <td>{{ c.description }}</td>
+      <td>{{ c.issuer }}</td>
+      <td>{{ c.customer }}</td>
+      <td>{{ c.creation }}</td>
+      <td>{{ c.due_date }}</td>
+      <td>
+        <a href="files/{{ c.file }}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

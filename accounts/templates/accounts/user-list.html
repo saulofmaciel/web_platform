@@ -1,0 +1,49 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} User {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>My users</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'signup/'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Fist name</th>
+      <th>Last name</th>
+      <th>E-mail</th>
+      <th>Is Active</th>
+      <th>Is Staff</th>
+      <th>Is Superuser</th>
+      <th>Last login</th>
+
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in data %}
+    <tr>
+      <td>{{ d.username }}</td>
+      <td>{{ d.firstname }}</td>
+      <td>{{ d.lastname }}</td>
+      <td>{{ d.email }}</td>
+      <td>{{ d.is_active }}</td>
+      <td>{{ d.is_staff }}</td>
+      <td>{{ d.is_superuser }}</td>
+      <td>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
+        {% if user|user_has_role:"site_admin" %}
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

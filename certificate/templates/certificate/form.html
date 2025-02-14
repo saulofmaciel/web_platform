@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load bootstrap %}
+{% block title %}{{ request.resolver_match.url_name }} {% endblock %}
+
+{% block content %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>
+  {% if request.resolver_match.url_name == 'issuer-create' %} Issuer Create {% endif %}
+  {% if request.resolver_match.url_name == 'customer-create' %} Customer Create {% endif %}
+  {% if request.resolver_match.url_name == 'country-create' %} Country Create {% endif %}
+  {% if request.resolver_match.url_name == 'user-issuer-create' %} User - Issuer Create {% endif %}
+  {% if request.resolver_match.url_name == 'user-customer-create' %} User - Customer Create {% endif %}
+  </h2>
+</div>
+<form class="" method="post">
+  {% csrf_token %}
+  {{ form | bootstrap }}
+  <input type="submit" name="" value="submit">
+</form>
+{% endblock %}

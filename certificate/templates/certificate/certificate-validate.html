@@ -1,0 +1,49 @@
+{% load static %} {% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static '/style.css' %}">
+  <!-- Latest compiled and minified CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Latest compiled JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+          integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
+		  crossorigin="anonymous">
+  </script>
+  <title>Certificate Validate</title>
+</head>
+<body>
+  <header>
+    <div class="d-flex justify-content-between align-items-center px-4">
+      <h1>Digital Certificate Platform
+      </h1>
+      {% if user.is_authenticated %}
+      <form class="d-flex search-bar">
+        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+        <button class="btn btn-light" type="submit">Search</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+  <div class="main-content">
+    <div id="content">
+      <h2>Certificate Validation</h2>
+      <p>This page states that the calibration certificate below is valid:</p>
+      <p><strong>Description:</strong> {{ data.description }}</p>
+      <p><strong>Issued by:</strong> {{ data.issuer }}</p>
+      <p><strong>Issued to:</strong> {{ data.customer }}</p>
+      <p><strong>Creation date:</strong> {{ data.creation }}</p>
+      <p><strong>Due date:</strong> {{ data.due_date }}</p>
+      <p><strong>Token:</strong> {{ data.token }}</p>
+      <p><strong>File:</strong> <a href="{{ certificate.file.url }}">Download Certificate</a></p>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2024 My Website. All rights reserved.</p>
+  </footer>
+</body>
+</html>

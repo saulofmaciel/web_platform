@@ -1,0 +1,44 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} Issuers  {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>My issuers</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'issuer-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Parent</th>
+      <th>E-mail</th>
+      <th>Active</th>
+      <th>Creation</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in issuer %}
+    <tr>
+      <td>{{ i.description }}</td>
+      <td>{{ i.parent }}</td>
+      <td>{{ i.email }}</td>
+      <td>{{ i.active }}</td>
+      <td>{{ i.creation }}</td>
+      <td>
+        <a href="{% url 'issuer-detail' i.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
+        {% if user|user_has_role:"site_admin" %}
+        <a href="{% url 'issuer-update' i.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

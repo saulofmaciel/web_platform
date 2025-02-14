@@ -1,0 +1,44 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} Issuers  {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>My countries</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'country-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>ID</th>
+      <th>Currency</th>
+      <th>Timezone</th>
+      <th>Language</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in country %}
+    <tr>
+      <td>{{ c.name }}</td>
+      <td>{{ c.country_id }}</td>
+      <td>{{ c.currency }}</td>
+      <td>{{ c.timezone_1 }}</td>
+      <td>{{ c.language_1 }}</td>
+      <td>
+        <a href="{% url 'country-detail' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
+        {% if user|user_has_role:"site_admin" %}
+        <a href="{% url 'country-update' c.pk %}" ><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

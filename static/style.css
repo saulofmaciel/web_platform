@@ -1,0 +1,66 @@
+body {
+    display: flex;
+    flex-direction: column; /* Stack header, content, and footer vertically */
+    height: 100vh;
+    margin: 0;
+}
+
+header {
+    background-color: #ff7400;
+    color: white;
+    padding: 10px;
+}
+
+footer {
+    background-color: #ff7400;
+    color: white;
+    padding: 10px;
+    text-align: center;
+}
+
+.main-content {
+    display: flex;
+    flex: 1; /* Occupy available space between header and footer */
+    overflow: hidden; /* Prevent overflow issues */
+}
+
+.btn-add {
+    background-color: #ff7400;
+    color: #fff;
+    font-weight: bold;
+    bottom: 20px;
+    right: 20px;
+}
+
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    overflow-y: auto; /* Allow scrolling if content exceeds height */
+}
+
+#content {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto; /* Allow scrolling if content exceeds height */
+}
+
+#sidebar .nav-link {
+    color: #000;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}
+
+#sidebar .nav-link.active {
+    background-color: #FF8A05; /* Highlight color for the active item */
+    color: #fff; /* Text color for the active item */
+    font-weight: bold; /* Optional: emphasize the active item */
+    border-radius: 5px; /* Optional: rounded corners */
+}
+
+#sidebar .nav-link:hover {
+    background-color: #ffa203; /* Lighter orange on hover for non-active items */
+    color: #000;
+}
+
