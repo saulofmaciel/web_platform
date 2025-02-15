@@ -205,6 +205,7 @@ def certificate_update(request, pk):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_employee')
 def issuer_list_view(request):
     template = 'certificate/issuer-list.html'
     issuer = Issuer.objects.all()
