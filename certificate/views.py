@@ -15,6 +15,8 @@ from rolepermissions.checkers import has_role
 from rolepermissions.decorators import has_role_decorator
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from django.conf import settings
+
 
 from .admin import UserIssuerAdmin
 from .models import Certificate, Issuer, Customer, Country, UserCustomer, UserIssuer
@@ -99,7 +101,8 @@ def certificate_create(request):
 
             if add_watermark:
                 # Apply watermark using PyPDF2
-                watermark_path = './watermark_1.pdf'
+                watermark_path = os.path.join(settings.STATIC_ROOT, 'watermark_1.pdf')
+                #watermark_path =  './watermark_1.pdf'
                 output_path = f'/tmp/watermarked_{uploaded_file.name}'
 
                 reader_pdf = PdfReader(temp_file_path)
