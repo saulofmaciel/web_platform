@@ -28,7 +28,7 @@
       <td>
         <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
         {% if user|user_has_role:"site_admin" %}
-        <a href="{% url 'user-customer-update' d.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        <a href="{% url 'user-customer-update' d.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
         <a href=""><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
         {% endif %}
 

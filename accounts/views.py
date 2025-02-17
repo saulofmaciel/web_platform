@@ -14,7 +14,10 @@ def signup(request):
         form = UserCreationFormWithEmail(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('login')
+            if request.user.is_authenticated:
+                return redirect('certificate')
+            else:
+                return redirect('login')
     else:
         form = UserCreationFormWithEmail()
 

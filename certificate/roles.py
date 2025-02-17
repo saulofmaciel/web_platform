@@ -3,7 +3,8 @@ from rolepermissions.roles import AbstractUserRole
 class Approver(AbstractUserRole):
     role_name = "approver"
     available_permissions = {
-        'approver' : True
+        'approver' : True,
+        'internal_resource' : True
     }
 
 class SiteAdmin(AbstractUserRole):

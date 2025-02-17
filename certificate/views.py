@@ -150,7 +150,14 @@ def certificate_create(request):
             os.remove(qr_pdf_path)
 
             # Save the instance to the database
-            form.save()
+            certificate = form.save()
+
+            # Retrieve the issuer and customer
+            issuer = certificate.issuer
+            customer = certificate.customer
+
+            # Email appover to inform that certificate is ready for approval
+            email_approver(issuer, customer)
 
             return redirect('certificate')
         else:
@@ -208,7 +215,7 @@ def certificate_update(request, pk):
     return render(request, template, context)
 
 @login_required
-@has_role_decorator('internal_employee')
+@has_role_decorator('internal_resource')
 def issuer_list_view(request):
     template = 'certificate/issuer-list.html'
     issuer = Issuer.objects.all()
@@ -229,6 +236,7 @@ def issuer_create(request):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_resource')
 def issuer_detail(request, pk):
     template = 'certificate/detail.html'
     issuer = get_object_or_404(Issuer, pk=pk)
@@ -251,6 +259,7 @@ def issuer_update(request, pk):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_resource')
 def customer_list_view(request):
     template = 'certificate/customer-list.html'
     customer = Customer.objects.all()
@@ -293,6 +302,7 @@ def customer_update(request, pk):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_resource')
 def country_list_view(request):
     template = 'certificate/country-list.html'
     country = Country.objects.all()
@@ -335,6 +345,7 @@ def country_update(request, pk):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_resource')
 def user_issuer_list_view(request):
     template = 'certificate/user-issuer-list.html'
     data = UserIssuer.objects.all()
@@ -369,6 +380,7 @@ def user_issuer_update(request, pk):
     return render(request, template, context)
 
 @login_required
+@has_role_decorator('internal_resource')
 def user_customer_list_view(request):
     template = 'certificate/user-customer-list.html'
     data = UserCustomer.objects.all()
@@ -404,17 +416,36 @@ def user_customer_update(request, pk):
 
 
 def email_customer(request):
-    print('Issuer: '+ request.POST.get('issuer'))
-    print('Customer: '+ request.POST.get('customer'))
-
     issuer = Issuer.objects.get(pk=request.POST.get('issuer'))
     customer = Customer.objects.get(pk=request.POST.get('customer'))
+    
+    print('Email customer')
+    print('Issuer: '+ getattr(customer, 'name')) 
+    print('Customer: '+ getattr(issuer, 'name'))
 
     subject = 'Calibration certificate from ' + getattr(issuer, 'name')
     context = {'issuer': getattr(issuer, 'name'),
                'customer': getattr(customer, 'name'),
                }
-    template = 'certificate/email_certificate.html'
+    template = 'certificate/email_customer.html'
+    html_message = render_to_string(template, context)
+    from_email = 'teste120120120@gmail.com'
+    send_mail(subject=subject,
+              message=strip_tags(html_message),
+              from_email=from_email,
+              recipient_list=['saulofmaciel@yahoo.com.br', 
+                              getattr(customer, 'email'), 
+                              getattr(issuer, 'email')],
+              html_message=html_message,
+              fail_silently=False)
+
+
+def email_approver(issuer, customer):
+    subject = 'Calibration certificate to ' + getattr(customer, 'name')
+    context = {'issuer': getattr(issuer, 'name'),
+               'customer': getattr(customer, 'name'),
+               }
+    template = 'certificate/email_approver.html'
     html_message = render_to_string(template, context)
     from_email = 'teste120120120@gmail.com'
     # from_email = 'support@dpbs.com.br'
@@ -423,46 +454,35 @@ def email_customer(request):
     send_mail(subject=subject,
               message=strip_tags(html_message),
               from_email=from_email,
-              recipient_list=['saulofmaciel@yahoo.com.br'],
+              recipient_list=['saulofmaciel@yahoo.com.br', 
+                              getattr(issuer, 'email')],
               html_message=html_message,
               fail_silently=False)
 
-#    send_mail('Testing',
-#              'Testing e-mail message',
-#              'teste120120120@gmail.com',
-#              ['saulofmaciel@yahoo.com.br'],
-#              fail_silently=False)
-
-def send_email(request):
-    #print('Issuer: '+ request.POST.get('issuer'))
-    #print('Customer: '+ request.POST.get('customer'))
-
-    issuer = Issuer.objects.get(pk=request.POST.get('issuer'))
-    customer = Customer.objects.get(pk=request.POST.get('customer'))
-
+def send_email(issuer, customer, file_path=None):
     subject = 'Calibration certificate from ' + getattr(issuer, 'name')
     context = {'issuer': getattr(issuer, 'name'),
                'customer': getattr(customer, 'name'),
                }
-    template = 'certificate/email_certificate.html'
+    template = 'certificate/email_customer.html'
     html_message = render_to_string(template, context)
 
     from_email = 'teste120120120@gmail.com'
-    # from_email = 'support@dpbs.com.br'
-    # to = [context.get('email'), from_email]
-    # to = ['saulofmaciel@yahoo.com.br']
+    recipient_list = ['saulofmaciel@yahoo.com.br', 
+                      getattr(customer, 'email'), 
+                      getattr(issuer, 'email')]
 
     msg = EmailMultiAlternatives(
               subject=subject,
               body=strip_tags(html_message),
               from_email=from_email,
-              to=['saulofmaciel@yahoo.com.br', getattr(customer, 'email'), getattr(issuer, 'email')],
+              to=recipient_list,
               )
     msg.attach_alternative(html_message, 'text/html')
 
-    if request.FILES:
-        file = request.FILES['file']
-        msg.attach(file.name, file.read(), file.content_type)
+    if file_path:
+        with open(file_path, 'rb') as f:
+            msg.attach(os.path.basename(file_path), f.read(), 'application/pdf')
 
     msg.send()
 
@@ -493,9 +513,21 @@ def certificate_approval_list(request):
 @has_role_decorator('approver')
 def certificate_approval(request, pk):
     template = 'certificate/certificate-approval.html'
-    # user = User.objects.filter(username=request.user)
-    ## If user is superuser, retrieve all records
+    # Update certificate status to 'APPROVED'
     Certificate.objects.filter(pk=pk).update(status='APPROVED')
+
+    # Retrieve the issuer and customer
+    certificate = get_object_or_404(Certificate, pk=pk)
+    issuer = certificate.issuer
+    customer = certificate.customer
+
+    # Get the file path from the certificate model
+    file_path = certificate.file.path
+
+    # Inform customer that certificate was released
+    send_email(issuer, customer, file_path)
+
+    ## If user is superuser, retrieve all records to render approval page
     if request.user.is_superuser:
         certificate = Certificate.objects.filter(status='DRAFT')
     ## If users is associated with a customer, retrieve all records of this customer
