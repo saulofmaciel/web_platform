@@ -188,9 +188,11 @@ def certificate_delete(request, pk):
     if request.method == 'POST':
         certificate = get_object_or_404(Certificate, pk=pk)
         certificate.delete()
-        return redirect('issuer')
-    else:
-        return render(request, 'certificate/certificate-list.html')
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})        
+#        return redirect('certificate')
+#    else:
+#        return render(request, 'certificate/certificate-list.html')
 
 @login_required
 def certificate_detail(request, pk):
