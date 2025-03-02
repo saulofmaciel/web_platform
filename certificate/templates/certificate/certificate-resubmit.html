@@ -1,0 +1,46 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} Certificate Resubmit {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Certificate Resubmit</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'certificate-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<form method="post" enctype="multipart/form-data" id="resubmitForm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="mb-3">
+        <label for="user_comment" class="form-label"><strong>Comment</strong></label>
+        <textarea id="user_comment" name="user_comment" class="form-control" placeholder="Insert your comments here..." rows="1"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Resubmit</button>
+    <div id="error-message" class="alert alert-danger" style="display: none;" role="alert">
+        A comment is required when resubmitting a certificate.
+    </div>
+    <div class="mt-3">
+      <label for="certificate_history" class="form-label"><strong>Certificate History</strong></label>
+      <div id="certificate_history" class="form-control" style="background-color: #e9ecef; cursor: not-allowed;" readonly>
+          {% for h in history %}
+              <p>{{ h.timestamp }} - {{ h.action }} by {{ h.user }}: {{ h.comments }}</p>
+          {% endfor %}
+      </div>
+    </div>
+</form>
+
+<script>
+document.getElementById('resubmitForm').addEventListener('submit', function(event) {
+    var userComment = document.getElementById('user_comment').value;
+    var errorMessage = document.getElementById('error-message');
+
+    if (!userComment) {
+        event.preventDefault();
+        errorMessage.style.display = 'block';
+    } else {
+        errorMessage.style.display = 'none';
+    }
+});
+</script>
+{% endblock content %}

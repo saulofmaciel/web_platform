@@ -96,11 +96,13 @@ class Certificate(models.Model):
     }
     STATUSES ={
         'DRAFT': 'Draft',
+        'REJECTED': 'Rejected',
+        'WAITING': 'Waiting',
         'APPROVED': 'Approved',
     }
     description         = models.CharField('Certificate description', max_length= 200)
     type                = models.CharField('Certificate Type', max_length=2, choices=CERT_TYPES)
-    file                = models.FileField(null=True, storage=fs)
+    file                = models.FileField(null=True, storage=fs, upload_to='certificates/')
     language            = models.CharField('Language', max_length=50)
     creation            = models.DateTimeField('Creation date time', auto_now_add=True)
     issuer              = models.ForeignKey(Issuer, null=True, related_name='issuer_of', on_delete=models.PROTECT)
@@ -110,6 +112,25 @@ class Certificate(models.Model):
     status              = models.CharField('Status', max_length=30, choices=STATUSES, default='DRAFT')
     token               = models.CharField('Token', max_length=36, unique=True, default=uuid.uuid4, editable=False)
     due_date            = models.DateField( null=True , blank=True, default='2099-12-31')
+    rejection_reason    = models.TextField(blank=True, null=True)
+    uploader            = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_certificates')
 
     def __str__(self):
         return self.description
+
+class CertificateHistory(models.Model):
+    ACTION_CHOICES = [
+        ('CREATED', 'Created'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('RELEASED', 'Released'),
+    ]
+
+    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE, related_name='history')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    comments = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.certificate} - {self.action} by {self.user} on {self.timestamp}"

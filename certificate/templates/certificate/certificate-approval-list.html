@@ -1,0 +1,51 @@
+{% extends 'base.html' %}{% load custom_filters %}
+{% block title %} Certificate approval  {% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>My certificates</h2>
+  {% if user|user_has_role:"site_admin" %}
+  <button onclick="location.href = 'certificate-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+      Add New
+  </button>
+  {% endif %}
+</div>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Issuer</th>
+      <th>Customer</th>
+      <th>Creation</th>
+      <th>Due Date</th>
+      <th>Status</th>
+      <th>Approve</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in certificates %}
+    <tr>
+      <td>
+        <!-- <a href="files/{{ c.file }}">{{ c.description }}</a> --> 
+        <a href="{{ c.file.url }}">{{ c.description}}</a>
+      </td>
+      <td>{{ c.issuer }}</td>
+      <td>{{ c.customer }}</td>
+      <td>{{ c.creation }}</td>
+      <td>{{ c.due_date }}</td>
+      <td>{{ c.status }}</td>
+      <td>
+        {% if c.status == "DRAFT" %}
+        <a href="{% url 'certificate-approval' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#approve-icon"/></svg></a>
+        {% else %}
+        <a href="{% url 'certificate-resubmit' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
+        {% endif %}
+        <!--<a href="{% url 'certificate-approval' c.pk %}" ><button type="button" class="btn btn-secondary">Approve</button> </a> -->
+        <!--<input type='button' style='width:100%; height:100%;' value='Approve' onclick='deleteRow(\"{$rec['memberID']}\")'/> -->
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{% endblock content %}

@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>My certificates</h2>
   {% if user|user_has_role:"internal_resource" %}
-  <button onclick="location.href = 'certificate-create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
+  <button onclick="location.href = 'certificate/create'" class="btn" style="background-color: #ff7400; color: #fff; bottom: 20px; right: 20px; font-weight: bold;">
       Add New
   </button>
   {% endif %}
@@ -24,7 +24,7 @@
     {% for c in certificate %}
     <tr>
       <td>
-           <a href="files/{{ c.file }}">{{ c.description }}</a>
+           <a href="{{ c.file.url }}">{{ c.description}}</a>
       </td>
       <td>{{ c.issuer }}</td>
       <td>{{ c.customer }}</td>
@@ -34,7 +34,8 @@
         <a href="{% url 'certificate-detail' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#view-icon"/></svg></a>
         {% if user|user_has_role:"certificate_admin" %}
         <a href="{% url 'certificate-update' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#edit-icon"/></svg></a>
-        <a href="{% url 'certificate-delete' c.pk %}" data-bs-toggle="modal" data-bs-target="#deleteModal" data-certificate-id="{{ c.pk }}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+        <a href="{% url 'certificate_delete' c.pk %}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a>
+<!--    <a href="{% url 'certificate_delete' c.pk %}" data-bs-toggle="modal" data-bs-target="#deleteModal" data-certificate-id="{{ c.pk }}"><svg class="bi me-2" width="24" height="24"><use xlink:href="#delete-icon"/></svg></a> -->
         {% endif %}
 <!--    
         {% if user|user_has_role:"approver" %}
@@ -66,6 +67,7 @@
   </div>
 </div>
 
+{% csrf_token %}
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var deleteModal = document.getElementById('deleteModal');
@@ -73,7 +75,24 @@
       var button = event.relatedTarget;
       var certificateId = button.getAttribute('data-certificate-id');
       var confirmDeleteButton = document.getElementById('confirmDeleteButton');
-      confirmDeleteButton.href = '/certificate-delete/' + certificateId ;
+      confirmDeleteButton.href = '#';
+      confirmDeleteButton.addEventListener('click', function () {
+        fetch('/certificate/delete/' + certificateId + '/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+          },
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.href = '/';
+          } else {
+            alert('Failed to delete the certificate.');
+          }
+        });
+      });
     });
   });
 </script>

@@ -4,7 +4,7 @@ from io import BytesIO
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail, EmailMessage, EmailMultiAlternatives
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
@@ -16,10 +16,11 @@ from rolepermissions.decorators import has_role_decorator
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from django.conf import settings
+from django.db.models import Q
 
 
 from .admin import UserIssuerAdmin
-from .models import Certificate, Issuer, Customer, Country, UserCustomer, UserIssuer
+from .models import Certificate, Issuer, Customer, Country, UserCustomer, UserIssuer, CertificateHistory
 from .forms import CertificateForm, IssuerForm, CustomerForm, CountryForm, UserIssuerForm, UserCustomerForm
 
 from django.core import serializers
@@ -68,6 +69,7 @@ def certificate_create(request):
         form = CertificateForm(request.POST, request.FILES)
         if form.is_valid():
             form.instance.uploader = request.user
+            form.instance.status = 'DRAFT'
             # Save the uploaded file temporarily
             uploaded_file = form.cleaned_data['file']
             add_watermark = form.cleaned_data['add_watermark']
@@ -152,6 +154,14 @@ def certificate_create(request):
             # Save the instance to the database
             certificate = form.save()
 
+            # Record history
+            CertificateHistory.objects.create(
+                certificate=certificate,
+                action='CREATED',
+                user=request.user,
+                comments='Certificate created'
+            )
+
             # Retrieve the issuer and customer
             issuer = certificate.issuer
             customer = certificate.customer
@@ -170,6 +180,58 @@ def certificate_create(request):
         context = {'form': form}
         return render(request, template, context)
 
+@login_required
+@has_role_decorator('approver')
+def certificate_approval(request, pk):
+    template = 'certificate/certificate-approval.html'
+    certificate = get_object_or_404(Certificate, pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'approve':
+            certificate.status = 'APPROVED'
+            certificate.rejection_reason = ''
+            certificate.save()
+
+            # Record history
+            CertificateHistory.objects.create(
+                certificate=certificate,
+                action='APPROVED',
+                user=request.user,
+                comments='Certificate approved'
+            )
+
+            # Inform customer that certificate was released
+            send_email(certificate.issuer, certificate.customer, certificate.file.path)
+        elif action == 'reject':
+            rejection_reason = request.POST.get('rejection_reason')
+            certificate.status = 'REJECTED'
+            certificate.rejection_reason = rejection_reason
+            certificate.save()
+
+            # Record history
+            CertificateHistory.objects.create(
+                certificate=certificate,
+                action='REJECTED',
+                user=request.user,
+                comments=rejection_reason
+            )
+
+            # Inform uploader that certificate was rejected
+            email_rejection(certificate.uploader, rejection_reason)
+
+        return redirect('certificate-approval-list')
+
+    # Retrieve the history of actions taken on the certificate
+    history = CertificateHistory.objects.filter(certificate=certificate).order_by('-timestamp')
+
+    context = {
+        'certificate': certificate,
+        'history': history,
+    }
+
+    return render(request, template, context)
+
 
 def certificate_validate(request, token):
     # Retrieve the certificate by token
@@ -185,14 +247,15 @@ def certificate_validate(request, token):
 @login_required
 @has_role_decorator('certificate_admin')
 def certificate_delete(request, pk):
-    if request.method == 'POST':
-        certificate = get_object_or_404(Certificate, pk=pk)
-        certificate.delete()
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False})        
-#        return redirect('certificate')
-#    else:
-#        return render(request, 'certificate/certificate-list.html')
+    # if request.method == 'POST':
+    #     certificate = get_object_or_404(Certificate, pk=pk)
+    #     certificate.delete()
+    #     return JsonResponse({'success': True})
+    # return JsonResponse({'success': False})  
+    certificate = get_object_or_404(Certificate, pk=pk)
+    certificate.delete()
+    return redirect('certificate')
+
 
 @login_required
 def certificate_detail(request, pk):
@@ -442,6 +505,7 @@ def email_customer(request):
               fail_silently=False)
 
 
+
 def email_approver(issuer, customer):
     subject = 'Calibration certificate to ' + getattr(customer, 'name')
     context = {'issuer': getattr(issuer, 'name'),
@@ -460,6 +524,25 @@ def email_approver(issuer, customer):
                               getattr(issuer, 'email')],
               html_message=html_message,
               fail_silently=False)
+    
+
+def email_rejection(uploader, rejection_reason):
+    subject = 'Certificate Rejected'
+    context = {'rejection_reason': rejection_reason}
+    template = 'certificate/email_rejection.html'
+    html_message = render_to_string(template, context)
+    from_email = 'teste120120120@gmail.com'
+    recipient_list = [uploader.email]
+
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=strip_tags(html_message),
+        from_email=from_email,
+        to=recipient_list,
+    )
+    msg.attach_alternative(html_message, 'text/html')
+    msg.send()
+
 
 def send_email(issuer, customer, file_path=None):
     subject = 'Calibration certificate from ' + getattr(issuer, 'name')
@@ -497,46 +580,49 @@ def send_email(issuer, customer, file_path=None):
 @login_required
 @has_role_decorator('approver')
 def certificate_approval_list(request):
-    template = 'certificate/certificate-approval.html'
-    # user = User.objects.filter(username=request.user)
-    ## If user is superuser, retrieve all records
-    if request.user.is_superuser:
-        certificate = Certificate.objects.filter(status='DRAFT')
-    ## If users is associated with a customer, retrieve all records of this customer
-    elif UserIssuer.objects.filter(user=request.user).exists():
-        issuer = UserIssuer.objects.filter(user=request.user, active=True)
-        certificate = Certificate.objects.filter(issuer__in=issuer.values_list('issuer'), status='DRAFT')
-    else:
-        certificate = []
-    context = {'certificate': certificate}
+    template = 'certificate/certificate-approval-list.html'
+    certificates = Certificate.objects.filter(Q(status='DRAFT') | Q(status='REJECTED'))
+    context = {'certificates': certificates}
+    print('Certificate-approval-list: ' + str(context))
     return render(request, template, context)
 
+
 @login_required
-@has_role_decorator('approver')
-def certificate_approval(request, pk):
-    template = 'certificate/certificate-approval.html'
-    # Update certificate status to 'APPROVED'
-    Certificate.objects.filter(pk=pk).update(status='APPROVED')
-
-    # Retrieve the issuer and customer
+@has_role_decorator('internal_resource')
+def certificate_resubmit(request, pk):
+    template = 'certificate/certificate-resubmit.html'
     certificate = get_object_or_404(Certificate, pk=pk)
-    issuer = certificate.issuer
-    customer = certificate.customer
 
-    # Get the file path from the certificate model
-    file_path = certificate.file.path
+    if request.method == 'POST':
+        form = CertificateForm(request.POST, request.FILES, instance=certificate)
+        user_comment = request.POST.get('user_comment')
+        if form.is_valid():
+            form.instance.status = 'DRAFT'
+            form.instance.rejection_reason = ''
+            form.save()
 
-    # Inform customer that certificate was released
-    send_email(issuer, customer, file_path)
+            # Record history
+            CertificateHistory.objects.create(
+                certificate=certificate,
+                action='RESUBMITTED',
+                user=request.user,
+                comments=user_comment or 'Certificate resubmitted'
+            )
 
-    ## If user is superuser, retrieve all records to render approval page
-    if request.user.is_superuser:
-        certificate = Certificate.objects.filter(status='DRAFT')
-    ## If users is associated with a customer, retrieve all records of this customer
-    elif UserIssuer.objects.filter(user=request.user).exists():
-        issuer = UserIssuer.objects.filter(user=request.user, active=True)
-        certificate = Certificate.objects.filter(issuer__in=issuer.values_list('issuer'), status='DRAFT')
+            # Email approver to inform that certificate is ready for approval
+            email_approver(certificate.issuer, certificate.customer)
+            return redirect('certificate-approval-list')
+
     else:
-        certificate = []
-    context = {'certificate': certificate}
+        form = CertificateForm(instance=certificate)
+
+    # Retrieve the history of actions taken on the certificate
+    history = CertificateHistory.objects.filter(certificate=certificate).order_by('-timestamp')
+
+    context = {
+        'form': form,
+        'certificate': certificate,
+        'history': history,
+    }
+
     return render(request, template, context)
