@@ -1,5 +1,4 @@
 *.idea
-*.sqlite3
 *pyc
 .DS_Store
 media
