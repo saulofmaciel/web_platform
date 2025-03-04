@@ -18,7 +18,8 @@ from pathlib import Path
 # from django.conf.global_settings import MEDIA_URL, STATIC_ROOT, STATICFILES_DIRS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+#BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -91,8 +92,15 @@ WSGI_APPLICATION = 'web_platform.wsgi.application'
 
 default_dburl = 'sqlite:////' + os.path.join(BASE_DIR, 'db.sqlite3')
 
+# DATABASES = {
+#     'default': config('DATABASE_URL', default=default_dburl, cast=dburl),
+# }
+
 DATABASES = {
-    'default': config('DATABASE_URL', default=default_dburl, cast=dburl),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
 }
 
 #DATABASES = {
