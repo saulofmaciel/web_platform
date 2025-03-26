@@ -17,6 +17,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from django.conf import settings
 from django.db.models import Q
+from pypdf import PdfReader, PdfWriter, Transformation
 
 
 from .admin import UserIssuerAdmin
@@ -72,7 +73,7 @@ def certificate_create(request):
             form.instance.status = 'DRAFT'
             # Save the uploaded file temporarily
             uploaded_file = form.cleaned_data['file']
-            add_watermark = form.cleaned_data['add_watermark']
+            add_stamp = form.cleaned_data['add_stamp']
 
             temp_file_path = f'/tmp/{uploaded_file.name}'
             with open(temp_file_path, 'wb') as temp_file:
@@ -101,51 +102,71 @@ def certificate_create(request):
             qr_canvas.drawImage(qr_image_path, 400, 50, width=100, height=100)  # Adjust position and size
             qr_canvas.save()
 
-            if add_watermark:
-                # Apply watermark using PyPDF2
-                watermark_path = os.path.join(settings.STATIC_ROOT, 'watermark_1.pdf')
-                #watermark_path =  './watermark_1.pdf'
-                output_path = f'/tmp/watermarked_{uploaded_file.name}'
 
-                reader_pdf = PdfReader(temp_file_path)
-                watermark = PdfReader(watermark_path).pages[0]
+            # Apply watermark using PyPDF2
+            watermark_path = os.path.join(settings.STATIC_ROOT, 'watermark_1.pdf')
+            #watermark_path =  './watermark_1.pdf'
+            output_path = f'/tmp/watermarked_{uploaded_file.name}'
 
-                writer_pdf = PdfWriter()
+            reader_pdf = PdfReader(temp_file_path)
+            watermark = PdfReader(watermark_path).pages[0]
 
-                for page in reader_pdf.pages:
-                    # Adjusting the size of the watermark
-                    scale_x = page.mediabox.width / watermark.mediabox.width
-                    scale_y = page.mediabox.height / watermark.mediabox.height
-                    transformation = Transformation().scale(sx=scale_x, sy=scale_y)
+            writer_pdf = PdfWriter()
 
-                    # Merging the watermark onto the PDF page
-                    page.merge_transformed_page(watermark, transformation, over=False)
-                    writer_pdf.add_page(page)
+            # Path to the stamp image
+            stamp_image_path = os.path.join(settings.STATIC_ROOT, 'stamp.png')
 
-                # Merge QR code PDF onto the last page
-                qr_pdf_reader = PdfReader(qr_pdf_path)
-                qr_page = qr_pdf_reader.pages[0]
+            for page in reader_pdf.pages:
+                # Adjusting the size of the watermark
+                scale_x = page.mediabox.width / watermark.mediabox.width
+                scale_y = page.mediabox.height / watermark.mediabox.height
+                transformation = Transformation().scale(sx=scale_x, sy=scale_y)
 
-                # Overlay QR code PDF onto the last page
-                last_page = writer_pdf.pages[-1]
-                last_page.merge_page(qr_page)
+                # Merging the watermark onto the PDF page
+                page.merge_transformed_page(watermark, transformation, over=False)
+                
+                if add_stamp:
+                    # Add the stamp image to the upper-right corner
+                    page_width = page.mediabox.width
+                    page_height = page.mediabox.height
+                    stamp_width = 100  # Adjust the width of the stamp
+                    stamp_height = 100  # Adjust the height of the stamp
+                    stamp_x = page_width - stamp_width - 10  # 10 units from the right edge
+                    stamp_y = page_height - stamp_height - 10  # 10 units from the top edge
 
-                # Save the watermarked file with QR code
-                with open(output_path, 'wb') as output_file:
-                    writer_pdf.write(output_file)
+                    # Create a temporary PDF with the stamp image
+                    stamp_pdf_path = '/tmp/stamp.pdf'
+                    c = canvas.Canvas(stamp_pdf_path, pagesize=(page_width, page_height))
+                    c.drawImage(stamp_image_path, stamp_x, stamp_y, width=stamp_width, height=stamp_height)
+                    c.save()
 
-                # Save the watermarked file to the model
-                with open(output_path, 'rb') as watermarked_file:
-                    form.instance.file.save(f'watermarked_{uploaded_file.name}', watermarked_file)
+                    # Merge the stamp PDF onto the current page
+                    stamp_pdf_reader = PdfReader(stamp_pdf_path)
+                    stamp_page = stamp_pdf_reader.pages[0]
+                    page.merge_page(stamp_page)
+                
+                writer_pdf.add_page(page)
 
-                # Cleanup
-                os.remove(output_path)
-                # Clean up the temporary QR code image after use
-                os.remove(qr_image_path)
+            # Merge QR code PDF onto the last page
+            qr_pdf_reader = PdfReader(qr_pdf_path)
+            qr_page = qr_pdf_reader.pages[0]
 
-            else:
-                # Save the original file without watermark
-                form.instance.file.save(uploaded_file.name, uploaded_file)
+            # Overlay QR code PDF onto the last page
+            last_page = writer_pdf.pages[-1]
+            last_page.merge_page(qr_page)
+
+            # Save the watermarked file with QR code
+            with open(output_path, 'wb') as output_file:
+                writer_pdf.write(output_file)
+
+            # Save the watermarked file to the model
+            with open(output_path, 'rb') as watermarked_file:
+                form.instance.file.save(f'watermarked_{uploaded_file.name}', watermarked_file)
+
+            # Cleanup
+            os.remove(output_path)
+            # Clean up the temporary QR code image after use
+            os.remove(qr_image_path)
 
             # Clean up temporary files
             os.remove(temp_file_path)

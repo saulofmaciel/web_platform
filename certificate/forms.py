@@ -5,7 +5,7 @@ from .models import Certificate, Issuer, Customer, Country, UserIssuer, UserCust
 
 class CertificateForm(forms.ModelForm):
     # Add a checkbox field to decide whether add watermark
-    add_watermark = forms.BooleanField(required=False, label="Add Watermark")
+    add_stamp = forms.BooleanField(required=False, label="Add stamp")
     class Meta:
         model = Certificate
         fields = 'description', 'type', 'file', 'language', 'issuer', 'customer'
