@@ -31,3 +31,7 @@ def user_list_view(request):
     context = {'data': data }
     return render(request, template, context)
 
+
+def password_reset_done(request):
+    template = 'registration/password_reset_done.html'
+    return render(request, template)
