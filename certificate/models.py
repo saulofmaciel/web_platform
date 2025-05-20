@@ -102,7 +102,8 @@ class Certificate(models.Model):
     }
     description         = models.CharField('Certificate description', max_length= 200)
     type                = models.CharField('Certificate Type', max_length=2, choices=CERT_TYPES)
-    file                = models.FileField(null=True, storage=fs, upload_to='certificates/')
+    #file                = models.FileField(null=True, storage=fs, upload_to='certificates/')
+    file                = models.FileField(null=True, upload_to='certificates/')
     language            = models.CharField('Language', max_length=50)
     creation            = models.DateTimeField('Creation date time', auto_now_add=True)
     issuer              = models.ForeignKey(Issuer, null=True, related_name='issuer_of', on_delete=models.PROTECT)

@@ -96,11 +96,11 @@ def certificate_create(request):
 
 
             # Create a PDF containing the QR code with ReportLab
-            qr_pdf_path = '/tmp/qr_code.pdf'
-            qr_canvas = canvas.Canvas(qr_pdf_path, pagesize=letter)
+            #qr_pdf_path = '/tmp/qr_code.pdf'
+            #qr_canvas = canvas.Canvas(qr_pdf_path, pagesize=letter)
 
-            qr_canvas.drawImage(qr_image_path, 400, 50, width=100, height=100)  # Adjust position and size
-            qr_canvas.save()
+            #qr_canvas.drawImage(qr_image_path, 400, 50, width=100, height=100)  # Adjust position and size
+            #qr_canvas.save()
 
 
             # Apply watermark using PyPDF2
@@ -148,12 +148,12 @@ def certificate_create(request):
                 writer_pdf.add_page(page)
 
             # Merge QR code PDF onto the last page
-            qr_pdf_reader = PdfReader(qr_pdf_path)
-            qr_page = qr_pdf_reader.pages[0]
+            #qr_pdf_reader = PdfReader(qr_pdf_path)
+            #qr_page = qr_pdf_reader.pages[0]
 
             # Overlay QR code PDF onto the last page
-            last_page = writer_pdf.pages[-1]
-            last_page.merge_page(qr_page)
+            #last_page = writer_pdf.pages[-1]
+            #last_page.merge_page(qr_page)
 
             # Save the watermarked file with QR code
             with open(output_path, 'wb') as output_file:
@@ -170,7 +170,7 @@ def certificate_create(request):
 
             # Clean up temporary files
             os.remove(temp_file_path)
-            os.remove(qr_pdf_path)
+            #os.remove(qr_pdf_path)
 
             # Save the instance to the database
             certificate = form.save()
