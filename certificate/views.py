@@ -18,7 +18,12 @@ from reportlab.lib.pagesizes import letter
 from django.conf import settings
 from django.db.models import Q
 from pypdf import PdfReader, PdfWriter, Transformation
+from pyhanko.sign import signers
+from pyhanko.sign import PdfSignatureMetadata
 
+from cryptography.hazmat.primitives.serialization import pkcs12
+from endesive import pdf
+from django.contrib import messages
 
 from .admin import UserIssuerAdmin
 from .models import Certificate, Issuer, Customer, Country, UserCustomer, UserIssuer, CertificateHistory
@@ -213,6 +218,82 @@ def certificate_approval(request, pk):
             certificate.status = 'APPROVED'
             certificate.rejection_reason = ''
             certificate.save()
+
+            try:
+                # Path to the PDF to sign
+                pdf_path = certificate.file.path
+                pdf_dir = os.path.dirname(certificate.file.path)
+                signed_pdf_name = os.path.basename(certificate.file.name).replace(".pdf", "_signed.pdf")
+                signed_pdf_path = os.path.join(pdf_dir, signed_pdf_name)
+                
+                # Path to your .pfx file and its password
+                pfx_path = os.path.join(settings.STATIC_ROOT, '23996454_out.pfx')
+                pfx_password = 'mitu$2024'
+                # Output path for the signed PDF
+                #signed_pdf_path = pdf_path.replace('.pdf', '_signed.pdf')
+
+                # 1. Load PFX (PKCS#12) file
+                with open(pfx_path, "rb") as f:
+                    pfx_data = f.read()
+                
+                # 2. Extract private key, certificate, and chain
+                private_key, cert, extra_certs = pkcs12.load_key_and_certificates(
+                    pfx_data, pfx_password.encode()
+                )
+
+                #Just to test 
+                #pdf_path = os.path.join(pdf_dir, "declaração_INSS.pdf" )
+
+                # 3. Read the original PDF
+                with open(pdf_path, "rb") as f:
+                    pdf_data = f.read()
+                #pdf_reader = PdfReader(BytesIO(pdf_data))
+                #last_page_index = len(pdf_reader.pages) - 1
+                last_page_index = -1
+
+                # 4. Prepare signature parameters
+                sig_params = {
+                    "sigflags": 3,
+                    "contact": "certificates@yourdomain.com",
+                    "location": "Your Organization",
+                    "signingdate": "D:%Y%m%d%H%M%S+00'00'",
+                    "reason": "Certificate Approval",
+                    "sigpage": last_page_index,
+                    "rectangle": (100, 100, 200, 200),
+                }
+
+                # 5. Apply the digital signature
+                signed_pdf = pdf.cms.sign(
+                    datau=pdf_data,
+                    cert=cert,
+                    key=private_key,
+                    othercerts=extra_certs,
+                    algomd="sha256",
+                    udct=sig_params
+                )
+
+                # 6. Save the signed PDF
+                with open(signed_pdf_path, "wb") as f:
+                    f.write(signed_pdf)
+
+                # Update certificate with signed file path
+                #certificate.file.name = signed_pdf_path.replace(settings.MEDIA_ROOT, '')
+                certificate.file.name = os.path.join(os.path.dirname(certificate.file.name), signed_pdf_name)
+                #certificate.file.url = os.path.join(os.path.basename(settings.MEDIA_ROOT),os.path.dirname(certificate.file.name),os.path.basename(signed_pdf_name)) 
+                #certificate.file.path = signed_pdf_path
+                certificate.save()
+
+                # Success message
+                messages.success(request, "Certificate approved and digitally signed successfully.")
+
+            except Exception as e:
+                # Error handling
+                messages.error(request, f"Error during signing: {str(e)}")
+                print(str(e))
+                # If signing fails, revert the status to DRAFT
+                certificate.status = 'DRAFT'
+                certificate.save()
+
 
             # Record history
             CertificateHistory.objects.create(
